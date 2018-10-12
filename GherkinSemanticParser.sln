@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.28010.2046
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Github", "Github", "{42BF070A-6DA5-4B2F-8AC4-F9BA0B77F033}"
 	ProjectSection(SolutionItems) = preProject
+		appveyor.yml = appveyor.yml
+		codecov.yml = codecov.yml
 		README.md = README.md
 	EndProjectSection
 EndProject
