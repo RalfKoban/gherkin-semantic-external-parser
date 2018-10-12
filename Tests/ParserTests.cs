@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 using MiKoSolutions.SemanticParsers.Gherkin.Yaml;
@@ -33,7 +34,26 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
 
                 Assert.That(yaml, Is.Not.Null.And.Not.Empty);
 
-                Assert.That(file.LocationSpan, Is.EqualTo(new LocationSpan(new LineInfo(0, -1), new LineInfo(0, -1))));
+                Assert.That(file.LocationSpan, Is.EqualTo(new LocationSpan(LineInfo.None, LineInfo.None)), yaml);
+            });
+        }
+
+        [Test]
+        public void Parse_Document_with_Feature_And_Comments()
+        {
+            var file = Parser.Parse(Path.Combine(_resourceDirectory, "Document_with_Feature_And_Comments.feature"));
+
+            Assert.Multiple(() =>
+            {
+                var yaml = CreateYaml(file);
+
+                Assert.That(yaml, Is.Not.Null.And.Not.Empty);
+
+                Assert.That(file.LocationSpan, Is.EqualTo(new LocationSpan(new LineInfo(1, 1), new LineInfo(5, 23))), yaml);
+
+                var feature = file.Children.Single();
+
+                Assert.That(feature.LocationSpan, Is.EqualTo(new LocationSpan(new LineInfo(1, 1), new LineInfo(5, 23))), yaml);
             });
         }
 
