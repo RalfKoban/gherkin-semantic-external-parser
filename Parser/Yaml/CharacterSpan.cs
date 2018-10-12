@@ -6,6 +6,8 @@ namespace MiKoSolutions.SemanticParsers.Gherkin.Yaml
 {
     public struct CharacterSpan : IEquatable<CharacterSpan>
     {
+        public static readonly CharacterSpan None = new CharacterSpan(0, -1);
+
         public CharacterSpan(int start, int end)
         {
             if (start > end && (start != 0 || end != -1))

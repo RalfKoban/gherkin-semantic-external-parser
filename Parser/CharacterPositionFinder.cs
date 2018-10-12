@@ -123,7 +123,7 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
                 return _characterPositionToLineInfoMap[characterPosition];
             }
 
-            return new LineInfo(0, -1);
+            return LineInfo.None;
         }
 
         private struct MapInfo : IEquatable<MapInfo>

@@ -43,8 +43,10 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
             var file = new File
                            {
                                Name = filePath,
-                               FooterSpan = new CharacterSpan(0, -1), // there is no footer
-                               LocationSpan = new LocationSpan(finder.GetLineInfo(Math.Min(0, lastCharacter)), finder.GetLineInfo(lastCharacter)),
+                               FooterSpan = CharacterSpan.None, // there is no footer
+                               LocationSpan = lastCharacter >= 0
+                                               ? new LocationSpan(finder.GetLineInfo(0), finder.GetLineInfo(lastCharacter))
+                                               : new LocationSpan(LineInfo.None, LineInfo.None),
                            };
 
             try
@@ -77,8 +79,8 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
                 {
                     var positionAfterFeature = sortedLocations.IndexOf(feature.Location) + 1;
 
-                    var location = positionAfterFeature < sortedLocations.Count
-                                    ? GetLineInfo(locations[positionAfterFeature])
+                    var location = positionAfterFeature < sortedLocations.Count - 1
+                                    ? GetLineInfo(locations[positionAfterFeature + 1])
                                     : file.LocationSpan.End;
 
                     var parsedChild = ParseFeature(feature, finder, location);
@@ -92,14 +94,14 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
                 var lines = SystemFile.ReadLines(filePath).Count();
                 if (lines == 0)
                 {
-                    file.LocationSpan = new LocationSpan(new LineInfo(0, -1), new LineInfo(0, -1));
+                    file.LocationSpan = new LocationSpan(LineInfo.None, LineInfo.None);
                 }
                 else
                 {
                     file.ParsingErrors.Add(new ParsingError
                                                {
                                                    ErrorMessage = ex.Message,
-                                                   Location = new LineInfo(0, -1),
+                                                   Location = LineInfo.None,
                                                });
 
                     file.LocationSpan = new LocationSpan(new LineInfo(1, 0), new LineInfo(lines + 1, 0));
@@ -125,7 +127,7 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
                                     Name = feature.Name,
                                     LocationSpan = new LocationSpan(start, end),
                                     HeaderSpan = new CharacterSpan(spanStart, spanEnd),
-                                    FooterSpan = new CharacterSpan(0, -1), // TODO: FIX
+                                    FooterSpan = CharacterSpan.None, // TODO: FIX
                                 };
 
             return container;
