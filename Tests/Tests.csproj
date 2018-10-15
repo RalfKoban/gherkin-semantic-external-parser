@@ -58,10 +58,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="Resources\Document_with_Feature_And_Comments.feature">
+    <None Include="Resources\Feature_And_Comments.feature">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="Resources\EmptyDocument.feature">
+    <None Include="Resources\Empty.feature">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

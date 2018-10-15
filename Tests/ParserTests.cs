@@ -26,7 +26,7 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
         [Test]
         public void Parse_EmptyDocument()
         {
-            var file = Parser.Parse(Path.Combine(_resourceDirectory, "EmptyDocument.feature"));
+            var file = Parser.Parse(Path.Combine(_resourceDirectory, "Empty.feature"));
 
             Assert.Multiple(() =>
             {
@@ -41,7 +41,7 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
         [Test]
         public void Parse_Document_with_Feature_And_Comments()
         {
-            var file = Parser.Parse(Path.Combine(_resourceDirectory, "Document_with_Feature_And_Comments.feature"));
+            var file = Parser.Parse(Path.Combine(_resourceDirectory, "Feature_And_Comments.feature"));
 
             Assert.Multiple(() =>
             {
