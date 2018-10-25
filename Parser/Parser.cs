@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -54,16 +55,6 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
                 var parser = new GherkinParser();
                 var document = parser.Parse(filePath);
 
-                // get locations ordered so that we know the position of the feature
-                var locations = document.Comments.Select(_ => _.Location).ToList();
-                var feature = document.Feature;
-                if (feature != null)
-                {
-                    locations.Add(feature.Location);
-                }
-
-                var sortedLocations = locations.OrderBy(_ => _.Line).ThenBy(_ => _.Column).ToList();
-
                 var root = new Container
                                {
                                    Type = nameof(GherkinDocument),
@@ -75,8 +66,15 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
 
                 file.Children.Add(root);
 
+                var feature = document.Feature;
                 if (feature != null)
                 {
+                    // get locations ordered so that we know the position of the feature
+                    var locations = document.Comments.Select(_ => _.Location).ToList();
+                    locations.Add(feature.Location);
+
+                    var sortedLocations = locations.OrderBy(_ => _.Line).ThenBy(_ => _.Column).ToList();
+
                     var positionAfterFeature = sortedLocations.IndexOf(feature.Location) + 1;
 
                     var location = positionAfterFeature < sortedLocations.Count - 1
@@ -121,6 +119,14 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
             var spanStart = finder.GetCharacterPosition(start);
             var spanEnd = spanStart + finder.GetLineLength(start);
 
+            var locationInside = feature.Tags.Select(_ => _.Location).Concat(feature.Children.Select(_ => _.Location)).OrderBy(_ => _.Line).ThenBy(_ => _.Column).FirstOrDefault();
+            if (locationInside != null)
+            {
+                var lineInfo = GetLineInfo(locationInside);
+                var position = finder.GetCharacterPosition(lineInfo) - 1;
+                spanEnd = position;
+            }
+
             var container = new Container
                                 {
                                     Type = nameof(Feature),
@@ -130,38 +136,142 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
                                     FooterSpan = CharacterSpan.None, // TODO: FIX
                                 };
 
+            container.Children.AddRange(ParseScenarioDefinitions(feature, finder, locationAfterFeature));
+            container.Children.AddRange(ParseTags(feature, finder, locationAfterFeature));
+
             return container;
         }
 
-//        private static TerminalNode ParseBlock(LeafBlock block, CharacterPositionFinder finder, TextProvider textProvider)
-//        {
-//            var name = GetName(block, textProvider);
-//            var type = GetType(block);
-//            var locationSpan = GetLocationSpan(block, finder);
-//            var span = GetCharacterSpan(block);
-//
-//            return new TerminalNode
-//                       {
-//                           Type = type,
-//                           Name = name,
-//                           LocationSpan = locationSpan,
-//                           Span = span,
-//                       };
-// check whether we can use a terminal node instead
-// var child = FinalAdjustAfterParsingComplete(container);
-// return child;
-//        }
-//    private static ContainerOrTerminalNode FinalAdjustAfterParsingComplete(Container container)
-//        {
-//            switch (container.Type)
-//            {
-//                case nameof(Table):
-//                case nameof(TableRow):
-//                    return container.ToTerminalNode();
-//
-//                default:
-//                    return container;
-//            }
-//        }
+        private static IEnumerable<ContainerOrTerminalNode> ParseScenarioDefinitions(Feature feature, CharacterPositionFinder finder, LineInfo locationAfterFeature)
+        {
+            var locations = feature.Children.Select(_ => _.Location).ToList();
+            var sortedLocations = locations.OrderBy(_ => _.Line).ThenBy(_ => _.Column).ToList();
+
+            var children = new List<ContainerOrTerminalNode>();
+            foreach (var scenarioDefinition in feature.Children)
+            {
+                var positionAfterDefinition = sortedLocations.IndexOf(scenarioDefinition.Location) + 1;
+
+                var location = positionAfterDefinition < sortedLocations.Count - 1
+                    ? GetLineInfo(locations[positionAfterDefinition + 1])
+                    : locationAfterFeature;
+
+                var parsedChild = ParseScenarioDefinition(scenarioDefinition, finder, location);
+                children.Add(parsedChild);
+            }
+
+            return children;
+        }
+
+        private static ContainerOrTerminalNode ParseScenarioDefinition(ScenarioDefinition definition, CharacterPositionFinder finder, LineInfo locationAfterDefinition)
+        {
+            var start = GetLineInfo(definition.Location);
+            var end = locationAfterDefinition;
+
+            var spanStart = finder.GetCharacterPosition(start);
+            var spanEnd = spanStart + finder.GetLineLength(start);
+
+            var locationInside = definition.Steps.Select(_ => _.Location).OrderBy(_ => _.Line).ThenBy(_ => _.Column).FirstOrDefault();
+            if (locationInside != null)
+            {
+                var lineInfo = GetLineInfo(locationInside);
+                var position = finder.GetCharacterPosition(lineInfo) - 1;
+                spanEnd = position;
+            }
+
+            var container = new Container
+                                {
+                                    Type = nameof(ScenarioDefinition),
+                                    Name = definition.Name,
+                                    LocationSpan = new LocationSpan(start, end),
+                                    HeaderSpan = new CharacterSpan(spanStart, spanEnd),
+                                    FooterSpan = CharacterSpan.None, // TODO: FIX
+                                };
+
+            container.Children.AddRange(ParseSteps(definition, finder, locationAfterDefinition));
+
+            return container;
+        }
+
+        private static IEnumerable<ContainerOrTerminalNode> ParseSteps(ScenarioDefinition definition, CharacterPositionFinder finder, LineInfo locationAfterDefinition)
+        {
+            var locations = definition.Steps.Select(_ => _.Location).ToList();
+            var sortedLocations = locations.OrderBy(_ => _.Line).ThenBy(_ => _.Column).ToList();
+
+            var children = new List<ContainerOrTerminalNode>();
+            foreach (var step in definition.Steps)
+            {
+                var positionAfterStep = sortedLocations.IndexOf(step.Location) + 1;
+
+                var location = positionAfterStep < sortedLocations.Count - 1
+                    ? GetLineInfo(locations[positionAfterStep + 1])
+                    : locationAfterDefinition;
+
+                var parsedChild = ParseStep(step, finder, location);
+                children.Add(parsedChild);
+            }
+
+            return children;
+        }
+
+        private static ContainerOrTerminalNode ParseStep(Step step, CharacterPositionFinder finder, LineInfo locationAfterDefinition)
+        {
+            var start = GetLineInfo(step.Location);
+            var end = locationAfterDefinition;
+
+            var spanStart = finder.GetCharacterPosition(start);
+            var spanEnd = spanStart + finder.GetLineLength(start);
+
+            var node = new TerminalNode
+                                {
+                                    Type = nameof(Step),
+                                    Name = step.Keyword + step.Text,
+                                    LocationSpan = new LocationSpan(start, end),
+                                    Span = new CharacterSpan(spanStart, spanEnd), // TODO: FIX
+                                };
+
+            return node;
+        }
+
+        private static IEnumerable<ContainerOrTerminalNode> ParseTags(Feature feature, CharacterPositionFinder finder, LineInfo locationAfterFeature)
+        {
+            var locations = feature.Tags.Select(_ => _.Location).ToList();
+            var sortedLocations = locations.OrderBy(_ => _.Line).ThenBy(_ => _.Column).ToList();
+
+            var children = new List<ContainerOrTerminalNode>();
+            foreach (var tag in feature.Tags)
+            {
+                var positionAfterDefinition = sortedLocations.IndexOf(tag.Location) + 1;
+
+                var location = positionAfterDefinition < sortedLocations.Count - 1
+                    ? GetLineInfo(locations[positionAfterDefinition + 1])
+                    : locationAfterFeature;
+
+                var parsedChild = ParseTag(tag, finder, location);
+                children.Add(parsedChild);
+            }
+
+            return children;
+        }
+
+        private static ContainerOrTerminalNode ParseTag(Tag tag, CharacterPositionFinder finder, LineInfo locationAfterDefinition)
+        {
+            var start = GetLineInfo(tag.Location);
+            var end = locationAfterDefinition;
+
+            var spanStart = finder.GetCharacterPosition(start);
+            var spanEnd = spanStart + finder.GetLineLength(start);
+
+            var container = new Container
+                                {
+                                    Type = nameof(Tag),
+                                    Name = tag.Name,
+                                    LocationSpan = new LocationSpan(start, end),
+                                    HeaderSpan = new CharacterSpan(spanStart, spanEnd),
+                                    FooterSpan = CharacterSpan.None, // TODO: FIX
+                                };
+
+            return container;
+        }
     }
 }

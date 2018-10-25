@@ -24,7 +24,7 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
         }
 
         [Test]
-        public void Parse_EmptyDocument()
+        public void Parse_Empty()
         {
             var file = Parser.Parse(Path.Combine(_resourceDirectory, "Empty.feature"));
 
@@ -39,7 +39,7 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
         }
 
         [Test]
-        public void Parse_Document_with_Feature_And_Comments()
+        public void Parse_Feature_And_Comments()
         {
             var file = Parser.Parse(Path.Combine(_resourceDirectory, "Feature_And_Comments.feature"));
 
@@ -54,6 +54,27 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
                 var feature = file.Children.Single();
 
                 Assert.That(feature.LocationSpan, Is.EqualTo(new LocationSpan(new LineInfo(1, 1), new LineInfo(5, 23))), yaml);
+            });
+        }
+
+        [Test]
+        public void Parse_Feature_Scenario()
+        {
+            var file = Parser.Parse(Path.Combine(_resourceDirectory, "Feature_Scenario.feature"));
+
+            Assert.Multiple(() =>
+            {
+                var yaml = CreateYaml(file);
+
+                Assert.That(yaml, Is.Not.Null.And.Not.Empty);
+
+                Assert.That(file.LocationSpan, Is.EqualTo(new LocationSpan(new LineInfo(1, 1), new LineInfo(9, 23))), yaml);
+
+                var feature = file.Children.Single();
+                Assert.That(feature.LocationSpan, Is.EqualTo(new LocationSpan(new LineInfo(1, 1), new LineInfo(9, 23))), yaml);
+
+                var scenario = feature.Children.Single();
+                Assert.That(scenario.LocationSpan, Is.EqualTo(new LocationSpan(new LineInfo(5, 1), new LineInfo(9, 23))), yaml);
             });
         }
 
