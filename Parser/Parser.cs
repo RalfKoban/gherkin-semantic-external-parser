@@ -148,7 +148,7 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
             var sortedLocations = locations.OrderBy(_ => _.Line).ThenBy(_ => _.Column).ToList();
 
             var children = new List<ContainerOrTerminalNode>();
-            foreach (var scenarioDefinition in feature.Children)
+            foreach (Scenario scenarioDefinition in feature.Children)
             {
                 var positionAfterDefinition = sortedLocations.IndexOf(scenarioDefinition.Location) + 1;
 
@@ -156,22 +156,22 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
                     ? GetLineInfo(locations[positionAfterDefinition + 1])
                     : locationAfterFeature;
 
-                var parsedChild = ParseScenarioDefinition(scenarioDefinition, finder, location);
+                var parsedChild = ParseScenario(scenarioDefinition, finder, location);
                 children.Add(parsedChild);
             }
 
             return children;
         }
 
-        private static ContainerOrTerminalNode ParseScenarioDefinition(ScenarioDefinition definition, CharacterPositionFinder finder, LineInfo locationAfterDefinition)
+        private static ContainerOrTerminalNode ParseScenario(Scenario scenario, CharacterPositionFinder finder, LineInfo locationAfterDefinition)
         {
-            var start = GetLineInfo(definition.Location);
+            var start = GetLineInfo(scenario.Location);
             var end = locationAfterDefinition;
 
             var spanStart = finder.GetCharacterPosition(start);
             var spanEnd = spanStart + finder.GetLineLength(start);
 
-            var locationInside = definition.Steps.Select(_ => _.Location).OrderBy(_ => _.Line).ThenBy(_ => _.Column).FirstOrDefault();
+            var locationInside = scenario.Steps.Select(_ => _.Location).OrderBy(_ => _.Line).ThenBy(_ => _.Column).FirstOrDefault();
             if (locationInside != null)
             {
                 var lineInfo = GetLineInfo(locationInside);
@@ -181,25 +181,25 @@ namespace MiKoSolutions.SemanticParsers.Gherkin
 
             var container = new Container
                                 {
-                                    Type = nameof(ScenarioDefinition),
-                                    Name = definition.Name,
+                                    Type = nameof(Scenario),
+                                    Name = scenario.Name,
                                     LocationSpan = new LocationSpan(start, end),
                                     HeaderSpan = new CharacterSpan(spanStart, spanEnd),
                                     FooterSpan = CharacterSpan.None, // TODO: FIX
                                 };
 
-            container.Children.AddRange(ParseSteps(definition, finder, locationAfterDefinition));
+            container.Children.AddRange(ParseSteps(scenario, finder, locationAfterDefinition));
 
             return container;
         }
 
-        private static IEnumerable<ContainerOrTerminalNode> ParseSteps(ScenarioDefinition definition, CharacterPositionFinder finder, LineInfo locationAfterDefinition)
+        private static IEnumerable<ContainerOrTerminalNode> ParseSteps(Scenario scenario, CharacterPositionFinder finder, LineInfo locationAfterDefinition)
         {
-            var locations = definition.Steps.Select(_ => _.Location).ToList();
+            var locations = scenario.Steps.Select(_ => _.Location).ToList();
             var sortedLocations = locations.OrderBy(_ => _.Line).ThenBy(_ => _.Column).ToList();
 
             var children = new List<ContainerOrTerminalNode>();
-            foreach (var step in definition.Steps)
+            foreach (var step in scenario.Steps)
             {
                 var positionAfterStep = sortedLocations.IndexOf(step.Location) + 1;
 
